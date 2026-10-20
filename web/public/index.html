@@ -1139,6 +1139,17 @@
       updateKpiCounts();
     } );
 
+    // Robust HTML Escaping Utility for Telemetry Rendering
+    function escapeHtml( str ) {
+      if ( str === null || str === undefined ) return '';
+      return String( str )
+        .replace( /&/g, '&amp;' )
+        .replace( /</g, '&lt;' )
+        .replace( />/g, '&gt;' )
+        .replace( /"/g, '&quot;' )
+        .replace( /'/g, '&#39;' );
+    }
+
     // Render Table based on search filter
     function renderAlertsTable() {
       const query = ( searchInput.value || '' ).trim().toLowerCase();
@@ -1172,10 +1183,16 @@
       filtered.forEach( ( item ) => {
         const row = document.createElement( 'tr' );
 
+        const safeZone = escapeHtml( item.zone || 'Unknown Sector' );
+        const safeSeverity = escapeHtml( item.severity || 'HIGH' );
+        const safeLighting = escapeHtml( item.lighting || 'DAY' );
+        const safeTimestamp = escapeHtml( item.timestamp || 'Just now' );
+        const safeKey = escapeHtml( item.key || '' );
+
         const isCritical = ( item.severity || '' ).toUpperCase().includes( 'CRITICAL' );
         const severityChip = isCritical
-          ? `<span class="chip chip-critical"><span class="material-symbols-outlined" style="font-size:12px;">emergency</span>${ item.severity }</span>`
-          : `<span class="chip chip-high"><span class="material-symbols-outlined" style="font-size:12px;">warning</span>${ item.severity || 'HIGH' }</span>`;
+          ? `<span class="chip chip-critical"><span class="material-symbols-outlined" style="font-size:12px;">emergency</span>${ safeSeverity }</span>`
+          : `<span class="chip chip-high"><span class="material-symbols-outlined" style="font-size:12px;">warning</span>${ safeSeverity }</span>`;
 
         const isNight = ( item.lighting || '' ).toUpperCase().includes( 'NIGHT' );
         const lightingChip = isNight
@@ -1184,16 +1201,16 @@
 
         row.innerHTML = `
           <td>
-            <div style="font-weight: 600; color: var(--md-sys-color-primary);">${ item.timestamp || 'Just now' }</div>
+            <div style="font-weight: 600; color: var(--md-sys-color-primary);">${ safeTimestamp }</div>
             <small style="color: var(--md-sys-color-on-surface-muted);">Corridor Telemetry</small>
           </td>
           <td>
-            <div style="font-weight: 600; margin-bottom: 4px;">${ item.zone || 'Unknown Sector' }</div>
+            <div style="font-weight: 600; margin-bottom: 4px;">${ safeZone }</div>
             ${ severityChip }
           </td>
           <td>${ lightingChip }</td>
           <td style="text-align: right;">
-            <button class="row-action-btn delete-btn" data-key="${ item.key }" data-zone="${ item.zone || 'Sector' }" data-time="${ item.timestamp || 'N/A' }" title="Delete this record">
+            <button class="row-action-btn delete-btn" data-key="${ safeKey }" data-zone="${ safeZone }" data-time="${ safeTimestamp }" title="Delete this record">
               <span class="material-symbols-outlined">delete</span>
             </button>
           </td>
@@ -1235,12 +1252,17 @@
             icon: createMapPin( isRecent )
           } ).addTo( markersLayer );
 
+          const safeZone = escapeHtml( item.zone || 'Intrusion Alert' );
+          const safeSeverity = escapeHtml( item.severity || 'Alert' );
+          const safeLighting = escapeHtml( item.lighting || '' );
+          const safeTimestamp = escapeHtml( item.timestamp || '' );
+
           marker.bindPopup( `
             <div style="font-family: Roboto, sans-serif; padding: 4px;">
-              <strong style="color: #0f2942; font-size: 14px;">${ item.zone || 'Intrusion Alert' }</strong><br/>
-              <span style="font-size: 12px; color: #dc2626; font-weight: 600;">${ item.severity || 'Alert' }</span><br/>
-              <span style="font-size: 12px; color: #475569;">${ item.lighting || '' }</span><br/>
-              <small style="color: #94a3b8;">${ item.timestamp || '' }</small>
+              <strong style="color: #0f2942; font-size: 14px;">${ safeZone }</strong><br/>
+              <span style="font-size: 12px; color: #dc2626; font-weight: 600;">${ safeSeverity }</span><br/>
+              <span style="font-size: 12px; color: #475569;">${ safeLighting }</span><br/>
+              <small style="color: #94a3b8;">${ safeTimestamp }</small>
             </div>
           ` );
 

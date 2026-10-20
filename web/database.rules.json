@@ -1,0 +1,12 @@
+{
+  "rules": {
+    "live_status": {
+      ".read": true,
+      ".write": true
+    },
+    "alerts": {
+      ".read": true,
+      ".write": true
+    }
+  }
+}
