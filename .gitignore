@@ -1,0 +1,45 @@
+# IDE & Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Build & Dependencies
+build/
+bin/
+out/
+*.log
+
+# Android & Gradle
+.gradle/
+client/.gradle/
+client/build/
+client/app/build/
+client/.kotlin/
+local.properties
+client/local.properties
+*.apk
+*.aab
+
+# PlatformIO
+.pio/
+IoT-G/.pio/
+
+# Firebase
+.firebase/
+web/.firebase/
+firebase-debug.log*
+firestore-debug.log*
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Secrets
+*.keystore
+*.jks
+*.key
+google-services.json

@@ -1,0 +1,1323 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Department of Wildlife Conservation | Elephant Early Warning System</title>
+
+  <!-- Google Fonts: Roboto & Material Symbols -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+
+  <!-- Leaflet Interactive Map CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    /* =====================================================================
+       MATERIAL DESIGN 3 (M3) COLOR SYSTEM & DESIGN TOKENS (LIGHT THEME)
+       ===================================================================== */
+    :root {
+      /* M3 Surface & Canvas */
+      --md-sys-color-background: #f8fafc;
+      --md-sys-color-surface: #ffffff;
+      --md-sys-color-surface-container-low: #f1f5f9;
+      --md-sys-color-surface-container: #e2e8f0;
+      --md-sys-color-outline: #cbd5e1;
+      --md-sys-color-outline-variant: #e2e8f0;
+
+      /* M3 Typography Colors */
+      --md-sys-color-on-surface: #0f172a;
+      --md-sys-color-on-surface-variant: #475569;
+      --md-sys-color-on-surface-muted: #94a3b8;
+
+      /* M3 Primary Brand (Wildlife Navy & Teal Accent) */
+      --md-sys-color-primary: #0f2942;
+      --md-sys-color-on-primary: #ffffff;
+      --md-sys-color-primary-container: #e0f2fe;
+      --md-sys-color-on-primary-container: #0369a1;
+
+      /* M3 Status Tonal Palettes */
+      --md-sys-color-safe: #16a34a;
+      --md-sys-color-safe-container: #dcfce7;
+      --md-sys-color-on-safe-container: #14532d;
+      --md-sys-color-safe-border: #86efac;
+
+      --md-sys-color-alert: #dc2626;
+      --md-sys-color-alert-container: #fee2e2;
+      --md-sys-color-on-alert-container: #7f1d1d;
+      --md-sys-color-alert-border: #fca5a5;
+
+      --md-sys-color-warning: #d97706;
+      --md-sys-color-warning-container: #fef3c7;
+      --md-sys-color-on-warning-container: #78350f;
+
+      /* M3 Elevation Shadows */
+      --md-elevation-1: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+      --md-elevation-2: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+      --md-elevation-3: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+      --md-elevation-4: 0 20px 25px -5px rgba(0, 0, 0, 0.09), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+
+      /* Shape Radii */
+      --md-shape-corner-xs: 4px;
+      --md-shape-corner-s: 8px;
+      --md-shape-corner-m: 12px;
+      --md-shape-corner-l: 16px;
+      --md-shape-corner-full: 9999px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    body {
+      background-color: var(--md-sys-color-background);
+      color: var(--md-sys-color-on-surface);
+      line-height: 1.5;
+      padding: 24px;
+      min-height: 100vh;
+    }
+
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      vertical-align: middle;
+      user-select: none;
+    }
+
+    .container {
+      max-width: 1440px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* =====================================================================
+       TOP APP BAR
+       ===================================================================== */
+    .app-bar {
+      background: var(--md-sys-color-surface);
+      border: 1px solid var(--md-sys-color-outline-variant);
+      border-radius: var(--md-shape-corner-l);
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: var(--md-elevation-1);
+    }
+
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand-logo-badge {
+      width: 48px;
+      height: 48px;
+      background: var(--md-sys-color-primary-container);
+      color: var(--md-sys-color-on-primary-container);
+      border-radius: var(--md-shape-corner-m);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+    }
+
+    .brand-titles h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--md-sys-color-primary);
+      letter-spacing: -0.01em;
+    }
+
+    .brand-titles p {
+      font-size: 0.825rem;
+      color: var(--md-sys-color-on-surface-variant);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .live-status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: var(--md-sys-color-surface-container-low);
+      border: 1px solid var(--md-sys-color-outline-variant);
+      border-radius: var(--md-shape-corner-full);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--md-sys-color-on-surface-variant);
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--md-sys-color-safe);
+      border-radius: 50%;
+      box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.4);
+      animation: pulse-ring 2s infinite;
+    }
+
+    @keyframes pulse-ring {
+      0% {
+        box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.6);
+      }
+      70% {
+        box-shadow: 0 0 0 8px rgba(22, 163, 74, 0);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(22, 163, 74, 0);
+      }
+    }
+
+    /* =====================================================================
+       STATUS BANNER (M3 HERO ALERT CARD)
+       ===================================================================== */
+    .status-hero {
+      border-radius: var(--md-shape-corner-l);
+      padding: 20px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: var(--md-elevation-1);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .status-hero.state-safe {
+      background: var(--md-sys-color-safe-container);
+      border: 1.5px solid var(--md-sys-color-safe-border);
+      color: var(--md-sys-color-on-safe-container);
+    }
+
+    .status-hero.state-alert {
+      background: var(--md-sys-color-alert-container);
+      border: 1.5px solid var(--md-sys-color-alert-border);
+      color: var(--md-sys-color-on-alert-container);
+      animation: alert-flash 1.2s infinite alternate;
+    }
+
+    @keyframes alert-flash {
+      from {
+        box-shadow: 0 0 4px var(--md-sys-color-alert);
+      }
+      to {
+        box-shadow: 0 0 20px rgba(220, 38, 38, 0.3);
+      }
+    }
+
+    .hero-content {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .hero-icon {
+      font-size: 36px;
+    }
+
+    .hero-text h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .hero-text p {
+      font-size: 0.875rem;
+      font-weight: 500;
+      opacity: 0.9;
+    }
+
+    .hero-time-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: rgba(255, 255, 255, 0.85);
+      border-radius: var(--md-shape-corner-full);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: inherit;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    /* =====================================================================
+       KPI STATS GRID
+       ===================================================================== */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    @media (max-width: 1024px) {
+      .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 600px) {
+      .kpi-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .kpi-card {
+      background: var(--md-sys-color-surface);
+      border: 1px solid var(--md-sys-color-outline-variant);
+      border-radius: var(--md-shape-corner-m);
+      padding: 16px;
+      box-shadow: var(--md-elevation-1);
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .kpi-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--md-elevation-2);
+    }
+
+    .kpi-icon-box {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--md-shape-corner-s);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--md-sys-color-surface-container-low);
+      color: var(--md-sys-color-primary);
+      flex-shrink: 0;
+    }
+
+    .kpi-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      overflow: hidden;
+    }
+
+    .kpi-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--md-sys-color-on-surface-muted);
+    }
+
+    .kpi-value {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--md-sys-color-on-surface);
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+    }
+
+    .kpi-sub {
+      font-size: 0.75rem;
+      color: var(--md-sys-color-on-surface-variant);
+    }
+
+    /* =====================================================================
+       MAIN TWO-COLUMN DASHBOARD GRID
+       ===================================================================== */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1.25fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 1024px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel-card {
+      background: var(--md-sys-color-surface);
+      border: 1px solid var(--md-sys-color-outline-variant);
+      border-radius: var(--md-shape-corner-l);
+      box-shadow: var(--md-elevation-1);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--md-sys-color-outline-variant);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #ffffff;
+    }
+
+    .panel-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--md-sys-color-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Map Styling */
+    #map {
+      height: 520px;
+      width: 100%;
+      border-radius: 0 0 var(--md-shape-corner-l) var(--md-shape-corner-l);
+    }
+
+    .map-controls-bar {
+      padding: 8px 16px;
+      background: var(--md-sys-color-surface-container-low);
+      border-bottom: 1px solid var(--md-sys-color-outline-variant);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.8125rem;
+      color: var(--md-sys-color-on-surface-variant);
+    }
+
+    .map-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #ffffff;
+      border: 1px solid var(--md-sys-color-outline);
+      border-radius: var(--md-shape-corner-s);
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--md-sys-color-on-surface-variant);
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .map-btn:hover {
+      background: var(--md-sys-color-surface-container);
+    }
+
+    /* Custom Leaflet Map Pin */
+    .custom-map-pin {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .pin-body {
+      width: 30px;
+      height: 30px;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.25);
+      border: 2px solid #ffffff;
+    }
+
+    .pin-body span {
+      transform: rotate(45deg);
+      font-size: 16px;
+      color: #ffffff;
+    }
+
+    .pin-pulse {
+      position: absolute;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(220, 38, 38, 0.4);
+      animation: radar-pulse 1.8s infinite ease-out;
+      pointer-events: none;
+    }
+
+    @keyframes radar-pulse {
+      0% {
+        transform: scale(0.6);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(2.0);
+        opacity: 0;
+      }
+    }
+
+    /* =====================================================================
+       MATERIAL RESPONSIVE DATA TABLE
+       ===================================================================== */
+    .table-toolbar {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--md-sys-color-outline-variant);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: #ffffff;
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--md-sys-color-surface-container-low);
+      border: 1px solid var(--md-sys-color-outline);
+      border-radius: var(--md-shape-corner-s);
+      padding: 6px 12px;
+      width: 100%;
+      max-width: 280px;
+    }
+
+    .search-box input {
+      border: none;
+      background: transparent;
+      outline: none;
+      font-size: 0.8125rem;
+      color: var(--md-sys-color-on-surface);
+      width: 100%;
+    }
+
+    .btn-tonal-danger {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--md-sys-color-alert-container);
+      color: var(--md-sys-color-on-alert-container);
+      border: 1px solid var(--md-sys-color-alert-border);
+      border-radius: var(--md-shape-corner-s);
+      padding: 6px 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .btn-tonal-danger:hover {
+      background: #fecaca;
+    }
+
+    .table-wrapper {
+      overflow-y: auto;
+      max-height: 460px;
+      border-radius: 0 0 var(--md-shape-corner-l) var(--md-shape-corner-l);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      text-align: left;
+    }
+
+    thead th {
+      position: sticky;
+      top: 0;
+      background: var(--md-sys-color-surface-container-low);
+      color: var(--md-sys-color-on-surface-variant);
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--md-sys-color-outline);
+      z-index: 10;
+    }
+
+    tbody td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--md-sys-color-outline-variant);
+      color: var(--md-sys-color-on-surface);
+      vertical-align: middle;
+    }
+
+    tbody tr {
+      transition: background 0.15s ease;
+    }
+
+    tbody tr:hover {
+      background-color: var(--md-sys-color-surface-container-low);
+    }
+
+    /* Badges & Chips */
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: var(--md-shape-corner-full);
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .chip-critical {
+      background: var(--md-sys-color-alert-container);
+      color: var(--md-sys-color-on-alert-container);
+      border: 1px solid var(--md-sys-color-alert-border);
+    }
+
+    .chip-high {
+      background: var(--md-sys-color-warning-container);
+      color: var(--md-sys-color-on-warning-container);
+      border: 1px solid #fde68a;
+    }
+
+    .chip-night {
+      background: #ede9fe;
+      color: #5b21b6;
+      border: 1px solid #ddd6fe;
+    }
+
+    .chip-day {
+      background: #e0f2fe;
+      color: #0369a1;
+      border: 1px solid #bae6fd;
+    }
+
+    .row-action-btn {
+      background: transparent;
+      border: none;
+      color: var(--md-sys-color-on-surface-muted);
+      cursor: pointer;
+      width: 32px;
+      height: 32px;
+      border-radius: var(--md-shape-corner-s);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+
+    .row-action-btn:hover {
+      background: var(--md-sys-color-alert-container);
+      color: var(--md-sys-color-alert);
+    }
+
+    .empty-state {
+      padding: 48px 24px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      color: var(--md-sys-color-on-surface-muted);
+    }
+
+    .empty-state span {
+      font-size: 48px;
+      color: var(--md-sys-color-outline);
+    }
+
+    /* =====================================================================
+       NATIVE MATERIAL DIALOGS (LIGHT DISMISS COMPLIANT)
+       ===================================================================== */
+    dialog {
+      border: none;
+      border-radius: var(--md-shape-corner-l);
+      padding: 24px;
+      background: #ffffff;
+      box-shadow: var(--md-elevation-4);
+      max-width: 440px;
+      width: calc(100% - 32px);
+      margin: auto;
+    }
+
+    dialog::backdrop {
+      background-color: rgba(15, 23, 42, 0.45);
+      backdrop-filter: blur(4px);
+    }
+
+    .dialog-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .dialog-icon-badge {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--md-sys-color-alert-container);
+      color: var(--md-sys-color-alert);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .dialog-header h3 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--md-sys-color-on-surface);
+    }
+
+    .dialog-body {
+      font-size: 0.875rem;
+      color: var(--md-sys-color-on-surface-variant);
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+
+    .dialog-target-box {
+      background: var(--md-sys-color-surface-container-low);
+      border: 1px solid var(--md-sys-color-outline-variant);
+      border-radius: var(--md-shape-corner-s);
+      padding: 10px 14px;
+      margin-top: 10px;
+      font-size: 0.8125rem;
+    }
+
+    .dialog-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+
+    .btn-text {
+      background: transparent;
+      border: none;
+      color: var(--md-sys-color-on-surface-variant);
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: var(--md-shape-corner-s);
+      cursor: pointer;
+    }
+
+    .btn-text:hover {
+      background: var(--md-sys-color-surface-container-low);
+    }
+
+    .btn-danger {
+      background: var(--md-sys-color-alert);
+      color: #ffffff;
+      border: none;
+      font-weight: 600;
+      padding: 8px 18px;
+      border-radius: var(--md-shape-corner-s);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s ease;
+    }
+
+    .btn-danger:hover {
+      background: #b91c1c;
+    }
+
+    /* =====================================================================
+       MATERIAL SNACKBAR / TOAST NOTIFICATIONS
+       ===================================================================== */
+    .snackbar {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #1e293b;
+      color: #f8fafc;
+      padding: 12px 20px;
+      border-radius: var(--md-shape-corner-m);
+      font-size: 0.85rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: var(--md-elevation-3);
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      z-index: 9999;
+    }
+
+    .snackbar.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .snackbar.error {
+      background: #7f1d1d;
+      color: #fee2e2;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+
+    <!-- 1. TOP APP BAR (OFFICIAL WILDLIFE CONSERVATION HEADER) -->
+    <header class="app-bar">
+      <div class="brand-section">
+        <div class="brand-logo-badge">
+          <span class="material-symbols-outlined">forest</span>
+        </div>
+        <div class="brand-titles">
+          <h1>Department of Wildlife Conservation</h1>
+          <p>
+            <span>Elephant Early Warning System</span>
+            <span>•</span>
+            <span>Dual-Zone Seismic & Motion Perimeter Telemetry</span>
+          </p>
+        </div>
+      </div>
+
+      <div class="live-status-pill">
+        <span class="pulse-dot"></span>
+        <span>LIVE TELEMETRY</span>
+      </div>
+    </header>
+
+    <!-- 2. HERO STATUS BANNER (REAL-TIME ALERT / SAFE STATE) -->
+    <div id="statusBanner" class="status-hero state-safe">
+      <div class="hero-content">
+        <span id="heroIcon" class="material-symbols-outlined hero-icon">verified_user</span>
+        <div class="hero-text">
+          <h2 id="statusHeadline">PERIMETER SAFE — All Sectors Clear</h2>
+          <p id="statusDetails">Perimeter sensors active. Normal perimeter surveillance in progress.</p>
+        </div>
+      </div>
+      <div class="hero-time-badge">
+        <span class="material-symbols-outlined" style="font-size: 16px;">schedule</span>
+        <span id="statusTimestamp">Updated: Just now</span>
+      </div>
+    </div>
+
+    <!-- 3. KPI TELEMETRY METRIC CARDS -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-icon-box">
+          <span class="material-symbols-outlined">shield</span>
+        </div>
+        <div class="kpi-info">
+          <span class="kpi-label">Perimeter State</span>
+          <span id="kpiState" class="kpi-value" style="color: var(--md-sys-color-safe);">SAFE</span>
+          <span class="kpi-sub">Continuous Real-Time Watch</span>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon-box">
+          <span class="material-symbols-outlined">share_location</span>
+        </div>
+        <div class="kpi-info">
+          <span class="kpi-label">Active Sector</span>
+          <span id="kpiSector" class="kpi-value">All Sectors Clear</span>
+          <span class="kpi-sub">Zone 1 (D26) & Zone 2 (D13)</span>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon-box">
+          <span class="material-symbols-outlined">lightbulb</span>
+        </div>
+        <div class="kpi-info">
+          <span class="kpi-label">Lighting & Relays</span>
+          <span id="kpiLighting" class="kpi-value">ONLINE</span>
+          <span class="kpi-sub">Floodlight & Strobe Armed</span>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon-box">
+          <span class="material-symbols-outlined">history</span>
+        </div>
+        <div class="kpi-info">
+          <span class="kpi-label">Intrusion Logs</span>
+          <span id="kpiAlertCount" class="kpi-value">0 Incidents</span>
+          <span id="kpiLastAlert" class="kpi-sub">Historical breach records</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. MAIN DASHBOARD: MAP & INCIDENT DATA TABLE -->
+    <div class="dashboard-grid">
+
+      <!-- Left Column: Live Sector Map -->
+      <div class="panel-card">
+        <div class="panel-header">
+          <h2 class="panel-title">
+            <span class="material-symbols-outlined">map</span>
+            Live Sector Map (Wildlife Corridor)
+          </h2>
+          <button id="recenterBtn" class="map-btn" title="Center on Perimeter Corridor">
+            <span class="material-symbols-outlined" style="font-size: 16px;">my_location</span>
+            Center Corridor
+          </button>
+        </div>
+        <div class="map-controls-bar">
+          <span>Protected Perimeter: Habarana / Sigiriya Elephant Sanctuary Boundary</span>
+          <span id="mapMarkerCount">0 active pins</span>
+        </div>
+        <div id="map"></div>
+      </div>
+
+      <!-- Right Column: Intrusion History Table with Deletion -->
+      <div class="panel-card">
+        <div class="panel-header">
+          <h2 class="panel-title">
+            <span class="material-symbols-outlined">crisis_alert</span>
+            Elephant Intrusion Log
+          </h2>
+          <button id="openClearAllBtn" class="btn-tonal-danger" title="Clear all recorded events">
+            <span class="material-symbols-outlined" style="font-size: 16px;">delete_sweep</span>
+            Clear Log
+          </button>
+        </div>
+
+        <div class="table-toolbar">
+          <div class="search-box">
+            <span class="material-symbols-outlined" style="font-size: 18px; color: var(--md-sys-color-on-surface-muted);">search</span>
+            <input type="text" id="searchInput" placeholder="Filter by sector or date..." />
+          </div>
+          <span id="filteredCountBadge" style="font-size: 0.75rem; color: var(--md-sys-color-on-surface-variant); font-weight: 500;">
+            Showing all logs
+          </span>
+        </div>
+
+        <div class="table-wrapper" tabindex="0" role="region" aria-label="Elephant Intrusion History Table">
+          <table>
+            <thead>
+              <tr>
+                <th>Time & Date</th>
+                <th>Sector & Severity</th>
+                <th>Lighting</th>
+                <th style="text-align: right;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="alertTableBody">
+              <tr>
+                <td colspan="4">
+                  <div class="empty-state">
+                    <span class="material-symbols-outlined">hourglass_top</span>
+                    <p>Connecting to Firebase Realtime Database...</p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- =====================================================================
+       CONFIRMATION DIALOG: DELETE SINGLE INTRUSION RECORD
+       ===================================================================== -->
+  <dialog id="deleteSingleModal" closedby="any" aria-labelledby="deleteSingleTitle">
+    <div class="dialog-header">
+      <div class="dialog-icon-badge">
+        <span class="material-symbols-outlined">delete</span>
+      </div>
+      <h3 id="deleteSingleTitle">Delete Intrusion Record</h3>
+    </div>
+    <div class="dialog-body">
+      <p>Are you sure you want to permanently delete this telemetry record from the cloud database?</p>
+      <div class="dialog-target-box">
+        <div id="deleteTargetZone" style="font-weight: 600; color: var(--md-sys-color-primary);">Zone</div>
+        <div id="deleteTargetTime" style="color: var(--md-sys-color-on-surface-muted); font-size: 0.75rem;">Time</div>
+      </div>
+    </div>
+    <div class="dialog-actions">
+      <button type="button" class="btn-text" id="cancelSingleDeleteBtn">Cancel</button>
+      <button type="button" class="btn-danger" id="confirmSingleDeleteBtn">
+        <span class="material-symbols-outlined" style="font-size: 18px;">delete</span>
+        Delete Record
+      </button>
+    </div>
+  </dialog>
+
+  <!-- =====================================================================
+       CONFIRMATION DIALOG: CLEAR ALL INTRUSION RECORDS
+       ===================================================================== -->
+  <dialog id="clearAllModal" closedby="any" aria-labelledby="clearAllTitle">
+    <div class="dialog-header">
+      <div class="dialog-icon-badge">
+        <span class="material-symbols-outlined">delete_forever</span>
+      </div>
+      <h3 id="clearAllTitle">Clear All Intrusion Logs</h3>
+    </div>
+    <div class="dialog-body">
+      <p>This action will permanently delete <strong>all recorded elephant intrusions</strong> from the Firebase database. This cannot be undone.</p>
+    </div>
+    <div class="dialog-actions">
+      <button type="button" class="btn-text" id="cancelClearAllBtn">Cancel</button>
+      <button type="button" class="btn-danger" id="confirmClearAllBtn">
+        <span class="material-symbols-outlined" style="font-size: 18px;">delete_sweep</span>
+        Clear All History
+      </button>
+    </div>
+  </dialog>
+
+  <!-- =====================================================================
+       MATERIAL FLOATING SNACKBAR / TOAST
+       ===================================================================== -->
+  <div id="snackbar" class="snackbar">
+    <span id="snackbarIcon" class="material-symbols-outlined">check_circle</span>
+    <span id="snackbarMessage">Notification message</span>
+  </div>
+
+  <!-- Firebase App & Realtime Database SDK (Modular v10) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref, onValue, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+    // 1. Firebase Configuration
+    const firebaseConfig = {
+      databaseURL: "https://device-streaming-ebe74626-default-rtdb.asia-southeast1.firebasedatabase.app"
+    };
+
+    const app = initializeApp( firebaseConfig );
+    const db = getDatabase( app );
+
+    // 2. Leaflet Map Initialization
+    const PERIMETER_CENTER = [ 7.9582, 80.7621 ];
+    const map = L.map( 'map', { zoomControl: false } ).setView( PERIMETER_CENTER, 15 );
+    L.control.zoom( { position: 'bottomright' } ).addTo( map );
+
+    // Clean, crisp light-mode tiles
+    L.tileLayer( 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors | Department of Wildlife Conservation'
+    } ).addTo( map );
+
+    const markersLayer = L.layerGroup().addTo( map );
+
+    document.getElementById( 'recenterBtn' ).addEventListener( 'click', () => {
+      map.flyTo( PERIMETER_CENTER, 15, { duration: 1.2 } );
+    } );
+
+    // Custom Map Marker Pin Creator
+    function createMapPin( isAlert = false ) {
+      const pinColor = isAlert ? '#dc2626' : '#0284c7';
+      const iconName = isAlert ? 'warning' : 'location_on';
+      const pulseHtml = isAlert ? '<div class="pin-pulse"></div>' : '';
+
+      return L.divIcon( {
+        className: 'custom-map-pin',
+        html: `
+          ${ pulseHtml }
+          <div class="pin-body" style="background: ${ pinColor };">
+            <span class="material-symbols-outlined">${ iconName }</span>
+          </div>
+        `,
+        iconSize: [ 30, 30 ],
+        iconAnchor: [ 15, 30 ],
+        popupAnchor: [ 0, -30 ]
+      } );
+    }
+
+    // 3. UI References
+    const statusBanner = document.getElementById( 'statusBanner' );
+    const heroIcon = document.getElementById( 'heroIcon' );
+    const statusHeadline = document.getElementById( 'statusHeadline' );
+    const statusDetails = document.getElementById( 'statusDetails' );
+    const statusTimestamp = document.getElementById( 'statusTimestamp' );
+
+    const kpiState = document.getElementById( 'kpiState' );
+    const kpiSector = document.getElementById( 'kpiSector' );
+    const kpiLighting = document.getElementById( 'kpiLighting' );
+    const kpiAlertCount = document.getElementById( 'kpiAlertCount' );
+    const kpiLastAlert = document.getElementById( 'kpiLastAlert' );
+
+    const tableBody = document.getElementById( 'alertTableBody' );
+    const searchInput = document.getElementById( 'searchInput' );
+    const filteredCountBadge = document.getElementById( 'filteredCountBadge' );
+    const mapMarkerCount = document.getElementById( 'mapMarkerCount' );
+
+    // Modal References
+    const deleteSingleModal = document.getElementById( 'deleteSingleModal' );
+    const deleteTargetZone = document.getElementById( 'deleteTargetZone' );
+    const deleteTargetTime = document.getElementById( 'deleteTargetTime' );
+    const confirmSingleDeleteBtn = document.getElementById( 'confirmSingleDeleteBtn' );
+    const cancelSingleDeleteBtn = document.getElementById( 'cancelSingleDeleteBtn' );
+
+    const clearAllModal = document.getElementById( 'clearAllModal' );
+    const openClearAllBtn = document.getElementById( 'openClearAllBtn' );
+    const confirmClearAllBtn = document.getElementById( 'confirmClearAllBtn' );
+    const cancelClearAllBtn = document.getElementById( 'cancelClearAllBtn' );
+
+    // In-memory records cache
+    let cachedAlerts = [];
+    let pendingDeleteKey = null;
+
+    // Toast/Snackbar Helper
+    const snackbar = document.getElementById( 'snackbar' );
+    const snackbarIcon = document.getElementById( 'snackbarIcon' );
+    const snackbarMessage = document.getElementById( 'snackbarMessage' );
+    let snackbarTimeout = null;
+
+    function showSnackbar( message, isError = false ) {
+      clearTimeout( snackbarTimeout );
+      snackbarMessage.textContent = message;
+      snackbarIcon.textContent = isError ? 'error' : 'check_circle';
+      snackbar.className = isError ? 'snackbar error show' : 'snackbar show';
+      snackbarTimeout = setTimeout( () => {
+        snackbar.className = isError ? 'snackbar error' : 'snackbar';
+      }, 3500 );
+    }
+
+    // 4. Modern Web Guidance Fallback for Light-Dismiss <dialog closedby="any">
+    [ deleteSingleModal, clearAllModal ].forEach( ( dialog ) => {
+      if ( dialog && !( 'closedBy' in HTMLDialogElement.prototype ) ) {
+        dialog.addEventListener( 'click', ( event ) => {
+          if ( event.target !== dialog ) return;
+          const rect = dialog.getBoundingClientRect();
+          const isInside = (
+            rect.top <= event.clientY &&
+            event.clientY <= rect.top + rect.height &&
+            rect.left <= event.clientX &&
+            event.clientX <= rect.left + rect.width
+          );
+          if ( !isInside ) dialog.close();
+        } );
+      }
+    } );
+
+    // 5. Real-Time Telemetry Listener: /live_status
+    onValue( ref( db, 'live_status' ), ( snapshot ) => {
+      const data = snapshot.val();
+      if ( !data ) return;
+
+      const isAlert = ( data.state === 'ALERT' );
+
+      if ( isAlert ) {
+        statusBanner.className = 'status-hero state-alert';
+        heroIcon.textContent = 'warning';
+        statusHeadline.textContent = `INTRUSION ALERT: ${ data.activeZone || 'Perimeter Breach' }`;
+        statusDetails.textContent = `Lighting: ${ data.lighting || 'Alert Active' } • Police Strobe & Siren Pulsing`;
+        statusTimestamp.textContent = `Updated: ${ data.updatedAt || 'Now' }`;
+
+        kpiState.textContent = 'ALERT';
+        kpiState.style.color = 'var(--md-sys-color-alert)';
+        kpiSector.textContent = data.activeZone || 'Zone Breach';
+        kpiLighting.textContent = data.lighting || 'Alert Mode';
+
+        if ( data.lat && data.lng ) {
+          map.flyTo( [ data.lat, data.lng ], 16, { duration: 1.5 } );
+        }
+      } else {
+        statusBanner.className = 'status-hero state-safe';
+        heroIcon.textContent = 'verified_user';
+        statusHeadline.textContent = 'PERIMETER SAFE — All Sectors Clear';
+        statusDetails.textContent = `Active Telemetry: ${ data.lighting || 'ONLINE' } • Vibration & PIR Monitoring`;
+        statusTimestamp.textContent = `Updated: ${ data.updatedAt || 'Now' }`;
+
+        kpiState.textContent = 'SAFE';
+        kpiState.style.color = 'var(--md-sys-color-safe)';
+        kpiSector.textContent = data.activeZone || 'All Clear';
+        kpiLighting.textContent = data.lighting || 'ONLINE';
+      }
+    } );
+
+    // 6. Real-Time Incident Log Listener: /alerts
+    onValue( ref( db, 'alerts' ), ( snapshot ) => {
+      const alertsObj = snapshot.val();
+      cachedAlerts = [];
+
+      if ( alertsObj ) {
+        // Map object entries preserving the unique Firebase push key
+        cachedAlerts = Object.entries( alertsObj ).map( ( [ key, val ] ) => ( {
+          key,
+          ...val
+        } ) ).reverse();
+      }
+
+      renderAlertsTable();
+      renderMapMarkers();
+      updateKpiCounts();
+    } );
+
+    // Render Table based on search filter
+    function renderAlertsTable() {
+      const query = ( searchInput.value || '' ).trim().toLowerCase();
+      const filtered = cachedAlerts.filter( item => {
+        if ( !query ) return true;
+        const text = `${ item.zone || '' } ${ item.severity || '' } ${ item.timestamp || '' } ${ item.lighting || '' }`.toLowerCase();
+        return text.includes( query );
+      } );
+
+      filteredCountBadge.textContent = query
+        ? `Showing ${ filtered.length } of ${ cachedAlerts.length } events`
+        : `Showing all ${ cachedAlerts.length } events`;
+
+      tableBody.innerHTML = '';
+
+      if ( filtered.length === 0 ) {
+        tableBody.innerHTML = `
+          <tr>
+            <td colspan="4">
+              <div class="empty-state">
+                <span class="material-symbols-outlined">nature_people</span>
+                <p><strong>${ query ? 'No matching logs found.' : 'No elephant intrusions recorded.' }</strong></p>
+                <small>${ query ? 'Try a different search keyword.' : 'All perimeter sectors are currently peaceful and secure.' }</small>
+              </div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      filtered.forEach( ( item ) => {
+        const row = document.createElement( 'tr' );
+
+        const isCritical = ( item.severity || '' ).toUpperCase().includes( 'CRITICAL' );
+        const severityChip = isCritical
+          ? `<span class="chip chip-critical"><span class="material-symbols-outlined" style="font-size:12px;">emergency</span>${ item.severity }</span>`
+          : `<span class="chip chip-high"><span class="material-symbols-outlined" style="font-size:12px;">warning</span>${ item.severity || 'HIGH' }</span>`;
+
+        const isNight = ( item.lighting || '' ).toUpperCase().includes( 'NIGHT' );
+        const lightingChip = isNight
+          ? `<span class="chip chip-night"><span class="material-symbols-outlined" style="font-size:12px;">dark_mode</span>Night</span>`
+          : `<span class="chip chip-day"><span class="material-symbols-outlined" style="font-size:12px;">light_mode</span>Day</span>`;
+
+        row.innerHTML = `
+          <td>
+            <div style="font-weight: 600; color: var(--md-sys-color-primary);">${ item.timestamp || 'Just now' }</div>
+            <small style="color: var(--md-sys-color-on-surface-muted);">Corridor Telemetry</small>
+          </td>
+          <td>
+            <div style="font-weight: 600; margin-bottom: 4px;">${ item.zone || 'Unknown Sector' }</div>
+            ${ severityChip }
+          </td>
+          <td>${ lightingChip }</td>
+          <td style="text-align: right;">
+            <button class="row-action-btn delete-btn" data-key="${ item.key }" data-zone="${ item.zone || 'Sector' }" data-time="${ item.timestamp || 'N/A' }" title="Delete this record">
+              <span class="material-symbols-outlined">delete</span>
+            </button>
+          </td>
+        `;
+
+        // Click row (except delete button) to center map on coordinates
+        row.addEventListener( 'click', ( e ) => {
+          if ( e.target.closest( '.delete-btn' ) ) return;
+          if ( item.lat && item.lng ) {
+            map.flyTo( [ item.lat, item.lng ], 16, { duration: 1 } );
+          }
+        } );
+
+        tableBody.appendChild( row );
+      } );
+
+      // Attach event listeners to all delete buttons
+      document.querySelectorAll( '.delete-btn' ).forEach( ( btn ) => {
+        btn.addEventListener( 'click', ( e ) => {
+          e.stopPropagation();
+          const key = btn.getAttribute( 'data-key' );
+          const zone = btn.getAttribute( 'data-zone' );
+          const time = btn.getAttribute( 'data-time' );
+          openSingleDeleteDialog( key, zone, time );
+        } );
+      } );
+    }
+
+    // Render Markers on Map
+    function renderMapMarkers() {
+      markersLayer.clearLayers();
+      let count = 0;
+
+      cachedAlerts.forEach( ( item, index ) => {
+        if ( item.lat && item.lng ) {
+          count++;
+          const isRecent = ( index === 0 );
+          const marker = L.marker( [ item.lat, item.lng ], {
+            icon: createMapPin( isRecent )
+          } ).addTo( markersLayer );
+
+          marker.bindPopup( `
+            <div style="font-family: Roboto, sans-serif; padding: 4px;">
+              <strong style="color: #0f2942; font-size: 14px;">${ item.zone || 'Intrusion Alert' }</strong><br/>
+              <span style="font-size: 12px; color: #dc2626; font-weight: 600;">${ item.severity || 'Alert' }</span><br/>
+              <span style="font-size: 12px; color: #475569;">${ item.lighting || '' }</span><br/>
+              <small style="color: #94a3b8;">${ item.timestamp || '' }</small>
+            </div>
+          ` );
+
+          if ( isRecent ) marker.openPopup();
+        }
+      } );
+
+      mapMarkerCount.textContent = `${ count } marker pin${ count === 1 ? '' : 's' }`;
+    }
+
+    // Update KPI Card Numbers
+    function updateKpiCounts() {
+      const count = cachedAlerts.length;
+      kpiAlertCount.textContent = `${ count } Incident${ count === 1 ? '' : 's' }`;
+      if ( count > 0 ) {
+        kpiLastAlert.textContent = `Latest: ${ cachedAlerts[ 0 ].timestamp || 'Recent' }`;
+      } else {
+        kpiLastAlert.textContent = 'All sectors clear';
+      }
+    }
+
+    // Search Input Listener
+    searchInput.addEventListener( 'input', renderAlertsTable );
+
+    // 7. Individual Record Delete Flow
+    function openSingleDeleteDialog( key, zone, time ) {
+      pendingDeleteKey = key;
+      deleteTargetZone.textContent = zone;
+      deleteTargetTime.textContent = time;
+      deleteSingleModal.showModal();
+    }
+
+    cancelSingleDeleteBtn.addEventListener( 'click', () => {
+      deleteSingleModal.close();
+      pendingDeleteKey = null;
+    } );
+
+    confirmSingleDeleteBtn.addEventListener( 'click', async () => {
+      if ( !pendingDeleteKey ) return;
+      const keyToDelete = pendingDeleteKey;
+      deleteSingleModal.close();
+
+      try {
+        await remove( ref( db, `alerts/${ keyToDelete }` ) );
+        showSnackbar( 'Intrusion record deleted successfully' );
+      } catch ( err ) {
+        console.error( 'Error deleting record:', err );
+        showSnackbar( 'Failed to delete record: ' + err.message, true );
+      } finally {
+        pendingDeleteKey = null;
+      }
+    } );
+
+    // 8. Bulk Clear All Flow
+    openClearAllBtn.addEventListener( 'click', () => {
+      if ( cachedAlerts.length === 0 ) {
+        showSnackbar( 'No intrusion records to clear.' );
+        return;
+      }
+      clearAllModal.showModal();
+    } );
+
+    cancelClearAllBtn.addEventListener( 'click', () => {
+      clearAllModal.close();
+    } );
+
+    confirmClearAllBtn.addEventListener( 'click', async () => {
+      clearAllModal.close();
+      try {
+        await remove( ref( db, 'alerts' ) );
+        showSnackbar( 'All elephant intrusion logs cleared' );
+      } catch ( err ) {
+        console.error( 'Error clearing logs:', err );
+        showSnackbar( 'Failed to clear logs: ' + err.message, true );
+      }
+    } );
+  </script>
+</body>
+
+</html>

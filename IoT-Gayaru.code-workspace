@@ -1,0 +1,18 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"name": "IoT-G",
+			"path": "IoT-G"
+		},
+		{
+			"path": "web"
+		},
+		{
+			"path": "client"
+		}
+	],
+	"settings": {}
+}

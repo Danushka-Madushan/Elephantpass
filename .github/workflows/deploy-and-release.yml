@@ -1,0 +1,97 @@
+name: CI/CD Deploy & Release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy-firebase:
+    name: Deploy to Firebase Hosting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Deploy to Firebase Hosting
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: |
+          cd web
+          if [ -n "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            echo "Authenticating via Firebase Service Account..."
+            echo "$FIREBASE_SERVICE_ACCOUNT" > sa.json
+            export GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/sa.json
+            npx --yes firebase-tools deploy --only hosting --project device-streaming-ebe74626 --non-interactive
+          elif [ -n "$FIREBASE_TOKEN" ]; then
+            echo "Authenticating via Firebase CI Token..."
+            npx --yes firebase-tools deploy --only hosting --token "$FIREBASE_TOKEN" --project device-streaming-ebe74626 --non-interactive
+          else
+            echo "::error::Neither FIREBASE_SERVICE_ACCOUNT nor FIREBASE_TOKEN secret is configured in GitHub repository secrets!"
+            exit 1
+          fi
+
+  release-android:
+    name: Build & Release Android APK
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make gradlew executable
+        run: chmod +x ./client/gradlew
+
+      - name: Build Android Release APK
+        run: |
+          cd client
+          ./gradlew assembleRelease
+
+      - name: Prepare APK Asset
+        id: prepare_apk
+        run: |
+          RELEASE_DIR="client/app/build/outputs/apk/release"
+          VERSION_TAG="${GITHUB_REF_NAME:-manual}"
+          
+          # Find generated apk (app-release.apk or app-release-unsigned.apk)
+          APK_FILE=$(find "$RELEASE_DIR" -maxdepth 1 -name "*.apk" | head -n 1)
+          if [ -z "$APK_FILE" ]; then
+            echo "::error::No APK file generated in $RELEASE_DIR"
+            exit 1
+          fi
+          
+          TARGET_APK="ElephantPass-${VERSION_TAG}.apk"
+          cp "$APK_FILE" "$TARGET_APK"
+          echo "apk_path=$TARGET_APK" >> $GITHUB_OUTPUT
+          echo "Prepared APK: $TARGET_APK"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.prepare_apk.outputs.apk_path }}
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
