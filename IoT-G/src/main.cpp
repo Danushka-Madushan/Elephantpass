@@ -3,6 +3,9 @@
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <time.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <freertos/queue.h>
 
 // =====================================================================
 // 1. FILL IN YOUR WI-FI (Must be 2.4GHz) & FIREBASE DATABASE URL
@@ -118,6 +121,54 @@ void sendToFirebase(const String& path, const String& method, const String& json
   }
 }
 
+// --- ASYNCHRONOUS FIREBASE DISPATCH TYPES & QUEUE ---
+struct FirebaseMessage {
+  char path[64];
+  char method[8];
+  char payload[512];
+};
+
+static QueueHandle_t firebaseQueue = NULL;
+
+// --- BACKGROUND WORKER TASK: Offloads HTTPS requests to Core 0 (Zero lag for hardware) ---
+void firebaseWorkerTask(void* pvParameters) {
+  FirebaseMessage msg;
+  for (;;) {
+    if (xQueueReceive(firebaseQueue, &msg, portMAX_DELAY) == pdTRUE) {
+      if (WiFi.status() == WL_CONNECTED) {
+        sendToFirebase(String(msg.path), String(msg.method), String(msg.payload));
+        // Allow lwIP TCP stack 25ms to cleanly release SSL session and feed Core 0 TWDT
+        vTaskDelay(pdMS_TO_TICKS(25));
+      } else {
+        Serial.printf("[FIREBASE QUEUE] Dropped request to %s (Wi-Fi offline)\n", msg.path);
+      }
+    }
+  }
+}
+
+// --- HELPER: Non-blocking enqueue for Firebase requests ---
+void queueFirebaseSend(const char* path, const char* method, const String& payload) {
+  if (firebaseQueue == NULL) {
+    Serial.println("[FIREBASE QUEUE] Error: Queue not initialized!");
+    return;
+  }
+  FirebaseMessage msg;
+  strncpy(msg.path, path, sizeof(msg.path) - 1);
+  msg.path[sizeof(msg.path) - 1] = '\0';
+
+  strncpy(msg.method, method, sizeof(msg.method) - 1);
+  msg.method[sizeof(msg.method) - 1] = '\0';
+
+  strncpy(msg.payload, payload.c_str(), sizeof(msg.payload) - 1);
+  msg.payload[sizeof(msg.payload) - 1] = '\0';
+
+  if (xQueueSend(firebaseQueue, &msg, 0) != pdTRUE) {
+    Serial.printf("[FIREBASE QUEUE] Warning: Queue full, dropped request to %s\n", path);
+  } else {
+    Serial.printf("[FIREBASE QUEUE] Enqueued %s -> %s\n", method, path);
+  }
+}
+
 // --- BLOCKING WI-FI GUARD: System will NOT run until Wi-Fi is connected ---
 void requireWiFiConnection() {
   if (WiFi.status() == WL_CONNECTED) {
@@ -171,7 +222,7 @@ void requireWiFiConnection() {
 
   // Sync clock and mark system ONLINE in Firebase
   configTime(19800, 0, "pool.ntp.org", "time.nist.gov");
-  sendToFirebase("/live_status.json", "PUT",
+  queueFirebaseSend("/live_status.json", "PUT",
                  "{\"state\":\"SAFE\",\"activeZone\":\"All Sectors Clear\",\"lighting\":\"ONLINE\"}");
 }
 
@@ -215,9 +266,13 @@ void triggerElephantAlert() {
     digitalWrite(RELAY1_PIN, RELAY_OFF);
   }
 
+  // 2. IMMEDIATELY ACTIVATE ALERT OUTPUTS (Zero Lag!)
   digitalWrite(STROBE_POWER_PIN, HIGH);
+  digitalWrite(RELAY2_PIN, RELAY_ON);
+  digitalWrite(BUZZER_PIN, HIGH);
+  digitalWrite(ONBOARD_LED, HIGH);
 
-  // 2. Push Alert Event + Live State to Firebase BEFORE starting 8s strobe loop
+  // 3. Prepare Alert Event + Live State and Enqueue for background Firebase dispatch
   String timestamp = getFormattedTime();
   String lightInfo = isNight ? "NIGHT (Floodlight ON)" : "DAY (Floodlight OFF)";
 
@@ -239,11 +294,11 @@ void triggerElephantAlert() {
   liveAlertJson += "\"updatedAt\":\"" + timestamp + "\"";
   liveAlertJson += "}";
 
-  Serial.println("[CLOUD] Pushing alert event to Firebase Realtime Database...");
-  sendToFirebase("/live_status.json", "PUT", liveAlertJson);
-  sendToFirebase("/alerts.json", "POST", eventJson);
+  Serial.println("[CLOUD] Queueing alert events for background Firebase dispatch...");
+  queueFirebaseSend("/live_status.json", "PUT", liveAlertJson);
+  queueFirebaseSend("/alerts.json", "POST", eventJson);
 
-  // 3. Alternate Relay 2 (Red NC <-> Blue NO) + Pulse Buzzer for 8 seconds
+  // 4. Alternate Relay 2 (Red NC <-> Blue NO) + Pulse Buzzer for 8 seconds
   Serial.println("[RELAY 2 + BUZZER] Flashing Red/Blue Police Strobe (D33) & Pulsing Buzzer...");
   unsigned long startAlert = millis();
 
@@ -261,7 +316,7 @@ void triggerElephantAlert() {
     delay(STROBE_INTERVAL_MS);
   }
 
-  // 4. Reset hardware outputs and restore SOLID ON Blue LED (showing Wi-Fi is still active)
+  // 5. Reset hardware outputs and restore SOLID ON Blue LED (showing Wi-Fi is still active)
   digitalWrite(RELAY1_PIN, RELAY_OFF);
   digitalWrite(RELAY2_PIN, RELAY_OFF);
   digitalWrite(STROBE_POWER_PIN, LOW);
@@ -272,10 +327,10 @@ void triggerElephantAlert() {
   vib2Triggered = false;
   pirTriggered  = false;
 
-  // 5. Update Firebase Live Status back to SAFE
+  // 6. Update Firebase Live Status back to SAFE
   String safeJson = "{\"state\":\"SAFE\",\"activeZone\":\"All Sectors Clear\",\"lighting\":\"" +
                     String(isNight ? "NIGHT" : "DAY") + "\",\"updatedAt\":\"" + getFormattedTime() + "\"}";
-  sendToFirebase("/live_status.json", "PUT", safeJson);
+  queueFirebaseSend("/live_status.json", "PUT", safeJson);
 
   Serial.println("[RESET] Alert cycle complete. Returning to perimeter watch...\n");
   delay(2000);
@@ -308,6 +363,23 @@ void setup() {
   Serial.println("=======================================================");
 
   WiFi.mode(WIFI_STA);
+
+  // Initialize FreeRTOS Queue and Background Worker Task for Firebase (Core 0)
+  firebaseQueue = xQueueCreate(8, sizeof(FirebaseMessage));
+  if (firebaseQueue != NULL) {
+    xTaskCreatePinnedToCore(
+      firebaseWorkerTask,
+      "firebaseTask",
+      14336, // 14 KB: Ample headroom for mbedTLS cryptographic operations
+      NULL,
+      1,
+      NULL,
+      0 // Core 0: Protocol/Network core
+    );
+    Serial.println("[SYSTEM] Firebase background task started on Core 0.");
+  } else {
+    Serial.println("[SYSTEM ERROR] Failed to create Firebase Queue!");
+  }
 
   // Block system startup until Wi-Fi connects and sounds the 3-beep ready tone
   requireWiFiConnection();
