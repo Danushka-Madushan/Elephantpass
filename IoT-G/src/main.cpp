@@ -1,4 +1,17 @@
 #include <Arduino.h>
+#include <WiFi.h>
+#include <WiFiClientSecure.h>
+#include <HTTPClient.h>
+#include <time.h>
+
+// =====================================================================
+// 1. FILL IN YOUR WI-FI (Must be 2.4GHz) & FIREBASE DATABASE URL
+// =====================================================================
+const char* WIFI_SSID     = "ESPGATE";
+const char* WIFI_PASSWORD = "123098123";
+
+// Paste your Firebase Realtime Database URL WITHOUT a trailing slash "/"
+const char* FIREBASE_HOST = "https://device-streaming-ebe74626-default-rtdb.asia-southeast1.firebasedatabase.app";
 
 // --- PIN DEFINITIONS (Unchanged Wiring) ---
 #define VIB1_PIN         26   // Vibration Sensor 1 (Zone 1)
@@ -9,7 +22,7 @@
 #define RELAY1_PIN       32   // Relay 1: Night Floodlight (Steady ON at night)
 #define RELAY2_PIN       33   // Relay 2: Red/Blue Police Strobe (Toggles NO/NC)
 #define STROBE_POWER_PIN 23   // Optional: Powers Relay 2 COM for small LEDs only during alert
-#define ONBOARD_LED      2    // Onboard Blue Status LED
+#define ONBOARD_LED      2    // Onboard Blue Status LED (SOLID ON = Wi-Fi Connected)
 
 // --- POLARITY SETTINGS ---
 #define NIGHT_STATE      HIGH // HIGH when dark on standard 3-pin LDR module
@@ -32,16 +45,163 @@ bool vib1Triggered = false;
 bool vib2Triggered = false;
 bool pirTriggered  = false;
 
+// --- HELPER: Audio + LED Feedback Patterns ---
+void playWiFiConnectedSignal() {
+  // 3 quick beeps + flashes to confirm Wi-Fi is connected
+  for (int i = 0; i < 3; i++) {
+    digitalWrite(BUZZER_PIN, HIGH);
+    digitalWrite(ONBOARD_LED, HIGH);
+    delay(100);
+    digitalWrite(BUZZER_PIN, LOW);
+    digitalWrite(ONBOARD_LED, LOW);
+    delay(100);
+  }
+  // Keep Onboard Blue LED SOLID ON while Wi-Fi is active and system is armed
+  digitalWrite(ONBOARD_LED, HIGH);
+}
+
+void playWiFiErrorSignal() {
+  // 2 long error beeps + rapid LED flashes when Wi-Fi fails or drops
+  for (int i = 0; i < 2; i++) {
+    digitalWrite(BUZZER_PIN, HIGH);
+    for (int j = 0; j < 3; j++) {
+      digitalWrite(ONBOARD_LED, HIGH);
+      delay(100);
+      digitalWrite(ONBOARD_LED, LOW);
+      delay(100);
+    }
+    digitalWrite(BUZZER_PIN, LOW);
+    delay(300);
+  }
+}
+
+// --- HELPER: Formatted Timestamp from NTP ---
+String getFormattedTime() {
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo, 100)) {
+    return String("Uptime: ") + String(millis() / 1000) + "s";
+  }
+  char timeStr[30];
+  strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", &timeinfo);
+  return String(timeStr);
+}
+
+// --- HELPER: Send JSON to Firebase Realtime Database ---
+void sendToFirebase(const String& path, const String& method, const String& jsonPayload) {
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("[FIREBASE] Aborted: Wi-Fi not connected.");
+    return;
+  }
+
+  WiFiClientSecure client;
+  client.setInsecure();
+
+  HTTPClient https;
+  String url = String(FIREBASE_HOST) + path;
+
+  if (https.begin(client, url)) {
+    https.addHeader("Content-Type", "application/json");
+    int httpCode = -1;
+
+    if (method == "POST") {
+      httpCode = https.POST(jsonPayload);
+    } else if (method == "PUT") {
+      httpCode = https.PUT(jsonPayload);
+    }
+
+    if (httpCode > 0) {
+      Serial.printf("[FIREBASE %s] Success (%d) -> %s\n", method.c_str(), httpCode, path.c_str());
+    } else {
+      Serial.printf("[FIREBASE ERROR] %s\n", https.errorToString(httpCode).c_str());
+    }
+    https.end();
+  }
+}
+
+// --- BLOCKING WI-FI GUARD: System will NOT run until Wi-Fi is connected ---
+void requireWiFiConnection() {
+  if (WiFi.status() == WL_CONNECTED) {
+    return; // Already connected!
+  }
+
+  // Ensure all relays and sensor latches are safely OFF while offline
+  digitalWrite(RELAY1_PIN, RELAY_OFF);
+  digitalWrite(RELAY2_PIN, RELAY_OFF);
+  digitalWrite(STROBE_POWER_PIN, LOW);
+  digitalWrite(ONBOARD_LED, LOW);
+  vib1Triggered = false;
+  vib2Triggered = false;
+  pirTriggered  = false;
+
+  // Keep trying in a blocking loop until Wi-Fi connects
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.printf("\n[WIFI] Connecting to %s ", WIFI_SSID);
+    WiFi.disconnect();
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+
+    int attempts = 0;
+    while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+      // Slow blink LED while searching; short 40ms chirp every 3rd attempt (1.5s)
+      digitalWrite(ONBOARD_LED, HIGH);
+      if (attempts % 3 == 0) {
+        digitalWrite(BUZZER_PIN, HIGH);
+        delay(40);
+        digitalWrite(BUZZER_PIN, LOW);
+        delay(460);
+      } else {
+        delay(500);
+      }
+      digitalWrite(ONBOARD_LED, LOW);
+      delay(500);
+      Serial.print(".");
+      attempts++;
+    }
+
+    // If still not connected after 20 seconds, sound the error alert and retry
+    if (WiFi.status() != WL_CONNECTED) {
+      Serial.println("\n[WIFI ERROR] Connection failed! System halted. Retrying in 2s...");
+      playWiFiErrorSignal();
+      delay(2000);
+    }
+  }
+
+  // Wi-Fi is now connected!
+  Serial.printf("\n[WIFI] Connected! IP Address: %s\n", WiFi.localIP().toString().c_str());
+  playWiFiConnectedSignal(); // 3 quick beeps + Solid Blue LED ON
+
+  // Sync clock and mark system ONLINE in Firebase
+  configTime(19800, 0, "pool.ntp.org", "time.nist.gov");
+  sendToFirebase("/live_status.json", "PUT",
+                 "{\"state\":\"SAFE\",\"activeZone\":\"All Sectors Clear\",\"lighting\":\"ONLINE\"}");
+}
+
 void triggerElephantAlert() {
   Serial.println("\n=======================================================");
   Serial.println("!!! ELEPHANT ALERT: ACTIVATING POLICE STROBE & ALARM !!!");
 
+  String zoneName;
+  String severity;
+  float simLat = 7.9570;
+  float simLng = 80.7603;
+
   if (vib1Triggered && vib2Triggered) {
     Serial.println("[ZONE INFO] CRITICAL: Both Zone 1 (D26) & Zone 2 (D13) shaking!");
+    zoneName = "Sector A & B - Main Village Perimeter";
+    severity = "CRITICAL (Dual-Zone Breach)";
+    simLat   = 7.9582;
+    simLng   = 80.7621;
   } else if (vib1Triggered) {
     Serial.println("[ZONE INFO] Tremor detected in Zone 1 (D26).");
-  } else if (vib2Triggered) {
+    zoneName = "Sector A - North Forest Border (Zone 1)";
+    severity = "HIGH (Zone 1 Tremor + Motion)";
+    simLat   = 7.9570;
+    simLng   = 80.7603;
+  } else {
     Serial.println("[ZONE INFO] Tremor detected in Zone 2 (D13).");
+    zoneName = "Sector B - East Waterhole Fence (Zone 2)";
+    severity = "HIGH (Zone 2 Tremor + Motion)";
+    simLat   = 7.9595;
+    simLng   = 80.7640;
   }
   Serial.println("=======================================================");
 
@@ -55,10 +215,35 @@ void triggerElephantAlert() {
     digitalWrite(RELAY1_PIN, RELAY_OFF);
   }
 
-  // Enable optional GPIO 23 power feed in case small LEDs are wired to Relay 2 COM
   digitalWrite(STROBE_POWER_PIN, HIGH);
 
-  // 2. Alternate Relay 2 (Red NC <-> Blue NO) + Pulse Buzzer for 8 seconds
+  // 2. Push Alert Event + Live State to Firebase BEFORE starting 8s strobe loop
+  String timestamp = getFormattedTime();
+  String lightInfo = isNight ? "NIGHT (Floodlight ON)" : "DAY (Floodlight OFF)";
+
+  String eventJson = "{";
+  eventJson += "\"zone\":\"" + zoneName + "\",";
+  eventJson += "\"severity\":\"" + severity + "\",";
+  eventJson += "\"lighting\":\"" + lightInfo + "\",";
+  eventJson += "\"lat\":" + String(simLat, 4) + ",";
+  eventJson += "\"lng\":" + String(simLng, 4) + ",";
+  eventJson += "\"timestamp\":\"" + timestamp + "\"";
+  eventJson += "}";
+
+  String liveAlertJson = "{";
+  liveAlertJson += "\"state\":\"ALERT\",";
+  liveAlertJson += "\"activeZone\":\"" + zoneName + "\",";
+  liveAlertJson += "\"lighting\":\"" + lightInfo + "\",";
+  liveAlertJson += "\"lat\":" + String(simLat, 4) + ",";
+  liveAlertJson += "\"lng\":" + String(simLng, 4) + ",";
+  liveAlertJson += "\"updatedAt\":\"" + timestamp + "\"";
+  liveAlertJson += "}";
+
+  Serial.println("[CLOUD] Pushing alert event to Firebase Realtime Database...");
+  sendToFirebase("/live_status.json", "PUT", liveAlertJson);
+  sendToFirebase("/alerts.json", "POST", eventJson);
+
+  // 3. Alternate Relay 2 (Red NC <-> Blue NO) + Pulse Buzzer for 8 seconds
   Serial.println("[RELAY 2 + BUZZER] Flashing Red/Blue Police Strobe (D33) & Pulsing Buzzer...");
   unsigned long startAlert = millis();
 
@@ -76,16 +261,21 @@ void triggerElephantAlert() {
     delay(STROBE_INTERVAL_MS);
   }
 
-  // 3. Reset all outputs to idle state
+  // 4. Reset hardware outputs and restore SOLID ON Blue LED (showing Wi-Fi is still active)
   digitalWrite(RELAY1_PIN, RELAY_OFF);
   digitalWrite(RELAY2_PIN, RELAY_OFF);
   digitalWrite(STROBE_POWER_PIN, LOW);
   digitalWrite(BUZZER_PIN, LOW);
-  digitalWrite(ONBOARD_LED, LOW);
+  digitalWrite(ONBOARD_LED, (WiFi.status() == WL_CONNECTED) ? HIGH : LOW);
 
   vib1Triggered = false;
   vib2Triggered = false;
   pirTriggered  = false;
+
+  // 5. Update Firebase Live Status back to SAFE
+  String safeJson = "{\"state\":\"SAFE\",\"activeZone\":\"All Sectors Clear\",\"lighting\":\"" +
+                    String(isNight ? "NIGHT" : "DAY") + "\",\"updatedAt\":\"" + getFormattedTime() + "\"}";
+  sendToFirebase("/live_status.json", "PUT", safeJson);
 
   Serial.println("[RESET] Alert cycle complete. Returning to perimeter watch...\n");
   delay(2000);
@@ -114,11 +304,23 @@ void setup() {
   digitalWrite(ONBOARD_LED, LOW);
 
   Serial.println("\n=======================================================");
-  Serial.println("  ELEPHANT ALERT SYSTEM (POLICE STROBE + DUAL ZONE)    ");
+  Serial.println("  ELEPHANT ALERT SYSTEM (MANDATORY WI-FI + FIREBASE)   ");
   Serial.println("=======================================================");
+
+  WiFi.mode(WIFI_STA);
+
+  // Block system startup until Wi-Fi connects and sounds the 3-beep ready tone
+  requireWiFiConnection();
 }
 
 void loop() {
+  // If Wi-Fi drops at any point, halt sensor monitoring and reconnect first
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("\n[WIFI LOST] Connection dropped! Halting sensors until Wi-Fi reconnects...");
+    playWiFiErrorSignal();
+    requireWiFiConnection();
+  }
+
   unsigned long now = millis();
 
   int vib1State = digitalRead(VIB1_PIN);
@@ -170,7 +372,7 @@ void loop() {
   // Live 1-second status line
   if (now - lastStatusTime >= STATUS_PRINT_MS) {
     lastStatusTime = now;
-    Serial.printf("[LIVE] VIB1:%d | VIB2:%d | PIR:%d | LDR:%s(%d) | Active: V1=%s V2=%s PIR=%s\n",
+    Serial.printf("[LIVE] WIFI:OK | VIB1:%d | VIB2:%d | PIR:%d | LDR:%s(%d) | Active: V1=%s V2=%s PIR=%s\n",
                   vib1State,
                   vib2State,
                   pirState,
