@@ -1,12 +1,20 @@
 # Add project specific R8 rules here.
 # AGP will combine all keep rule files in src/main/keepRules to pass to R8
-#
-# For more details, see
-#   https://d.android.com/r/tools/r8/keep-rules
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Preserve generic signatures & annotations for Gson reflection
+-keepattributes Signature, *Annotation*, EnclosingMethod, InnerClasses
+
+# Keep ElephantPass Data Models so Gson reflection preserves field names
+-keep class nibm.iot.elephantpass.data.models.** { *; }
+-keepclassmembers class nibm.iot.elephantpass.data.models.** { *; }
+
+# Keep Gson internals
+-keep class com.google.gson.** { *; }
+-keepclassmembers class * {
+    @com.google.gson.annotations.SerializedName <fields>;
+}
+
+# Keep osmdroid MapView and Overlay components
+-keep class org.osmdroid.** { *; }
+-dontwarn org.osmdroid.**
+-dontwarn org.slf4j.**
