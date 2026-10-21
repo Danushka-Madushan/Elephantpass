@@ -59,7 +59,7 @@ class MainViewModel(
 
     private fun startTelemetryPolling() {
         viewModelScope.launch {
-            repository.pollLiveStatus(intervalMillis = 5000L)
+            repository.pollLiveStatus(intervalMillis = 3000L)
                 .distinctUntilChanged()
                 .catch { e ->
                     _uiState.update { it.copy(errorMessage = e.message) }
@@ -86,7 +86,7 @@ class MainViewModel(
         }
 
         viewModelScope.launch {
-            repository.pollAlerts(intervalMillis = 5000L)
+            repository.pollAlerts(intervalMillis = 3000L)
                 .distinctUntilChanged()
                 .catch { e ->
                     _uiState.update { it.copy(errorMessage = e.message) }

@@ -8,8 +8,14 @@
 -keep class nibm.iot.elephantpass.data.models.** { *; }
 -keepclassmembers class nibm.iot.elephantpass.data.models.** { *; }
 
-# Keep Gson internals
+# Keep ElephantPass Repositories
+-keep class nibm.iot.elephantpass.data.repository.** { *; }
+-keepclassmembers class nibm.iot.elephantpass.data.repository.** { *; }
+
+# Keep Gson internals & TypeTokens
 -keep class com.google.gson.** { *; }
+-keep class com.google.gson.reflect.TypeToken { *; }
+-keep class * extends com.google.gson.reflect.TypeToken { *; }
 -keepclassmembers class * {
     @com.google.gson.annotations.SerializedName <fields>;
 }

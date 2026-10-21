@@ -1,7 +1,7 @@
 package nibm.iot.elephantpass.data.repository
 
 import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
+import com.google.gson.JsonParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -64,20 +64,39 @@ class ElephantRepository(
                     if (json.isNullOrBlank() || json == "null") {
                         Result.success(emptyList())
                     } else {
-                        val mapType = object : TypeToken<Map<String, Map<String, Any>>>() {}.type
-                        val map: Map<String, Map<String, Any>>? = gson.fromJson(json, mapType)
-
-                        if (map == null) {
+                        val element = JsonParser.parseString(json)
+                        if (!element.isJsonObject) {
                             Result.success(emptyList())
                         } else {
-                            val items = map.entries.mapNotNull { (key, valMap) ->
+                            val rootObj = element.asJsonObject
+                            val items = rootObj.entrySet().mapNotNull { (key, jsonElement) ->
                                 try {
-                                    val zone = valMap["zone"]?.toString() ?: "Unknown Sector"
-                                    val severity = valMap["severity"]?.toString() ?: "HIGH"
-                                    val lighting = valMap["lighting"]?.toString() ?: "DAY"
-                                    val timestamp = valMap["timestamp"]?.toString() ?: "Just now"
-                                    val lat = (valMap["lat"] as? Number)?.toDouble() ?: 7.9582
-                                    val lng = (valMap["lng"] as? Number)?.toDouble() ?: 80.7621
+                                    if (!jsonElement.isJsonObject) return@mapNotNull null
+                                    val obj = jsonElement.asJsonObject
+
+                                    val zone = if (obj.has("zone") && !obj.get("zone").isJsonNull) {
+                                        obj.get("zone").asString
+                                    } else "Unknown Sector"
+
+                                    val severity = if (obj.has("severity") && !obj.get("severity").isJsonNull) {
+                                        obj.get("severity").asString
+                                    } else "HIGH"
+
+                                    val lighting = if (obj.has("lighting") && !obj.get("lighting").isJsonNull) {
+                                        obj.get("lighting").asString
+                                    } else "DAY"
+
+                                    val timestamp = if (obj.has("timestamp") && !obj.get("timestamp").isJsonNull) {
+                                        obj.get("timestamp").asString
+                                    } else "Just now"
+
+                                    val lat = if (obj.has("lat") && !obj.get("lat").isJsonNull) {
+                                        obj.get("lat").asDouble
+                                    } else 7.9582
+
+                                    val lng = if (obj.has("lng") && !obj.get("lng").isJsonNull) {
+                                        obj.get("lng").asDouble
+                                    } else 80.7621
 
                                     AlertItem(
                                         key = key,
@@ -103,16 +122,24 @@ class ElephantRepository(
         }
     }
 
-    fun pollLiveStatus(intervalMillis: Long = 5000L): Flow<Result<LiveStatus>> = flow {
+    fun pollLiveStatus(intervalMillis: Long = 3000L): Flow<Result<LiveStatus>> = flow {
         while (true) {
-            emit(fetchLiveStatus())
+            try {
+                emit(fetchLiveStatus())
+            } catch (e: Exception) {
+                emit(Result.failure(e))
+            }
             delay(intervalMillis)
         }
     }
 
-    fun pollAlerts(intervalMillis: Long = 5000L): Flow<Result<List<AlertItem>>> = flow {
+    fun pollAlerts(intervalMillis: Long = 3000L): Flow<Result<List<AlertItem>>> = flow {
         while (true) {
-            emit(fetchAlerts())
+            try {
+                emit(fetchAlerts())
+            } catch (e: Exception) {
+                emit(Result.failure(e))
+            }
             delay(intervalMillis)
         }
     }

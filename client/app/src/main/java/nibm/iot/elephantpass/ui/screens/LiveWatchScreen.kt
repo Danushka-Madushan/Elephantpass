@@ -29,6 +29,7 @@ import nibm.iot.elephantpass.data.models.AlertItem
 import nibm.iot.elephantpass.data.models.LiveStatus
 import nibm.iot.elephantpass.ui.components.InteractiveMapView
 import nibm.iot.elephantpass.ui.components.IntrusionLogRow
+import nibm.iot.elephantpass.ui.components.KpiCardsSection
 import nibm.iot.elephantpass.ui.components.LiveStatusBanner
 import nibm.iot.elephantpass.ui.theme.OnSurfaceVariantDark
 import nibm.iot.elephantpass.ui.theme.WildlifeNavyPrimary
@@ -61,7 +62,16 @@ fun LiveWatchScreen(
             )
         }
 
-        // 2. Native Corridor Sector Map
+        // 2. System Telemetry KPI Cards
+        item {
+            KpiCardsSection(
+                liveStatus = liveStatus,
+                alertCount = alerts.size,
+                lastAlertTime = alerts.firstOrNull()?.timestamp ?: ""
+            )
+        }
+
+        // 3. Native Corridor Sector Map
         item {
             InteractiveMapView(
                 alerts = alerts,
@@ -74,7 +84,7 @@ fun LiveWatchScreen(
             )
         }
 
-        // 3. Recent Intrusion Feed Header
+        // 4. Recent Intrusion Feed Header
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -111,7 +121,7 @@ fun LiveWatchScreen(
             }
         }
 
-        // 4. Recent Alerts List Items
+        // 5. Recent Alerts List Items
         if (recentAlerts.isEmpty()) {
             item {
                 Box(
