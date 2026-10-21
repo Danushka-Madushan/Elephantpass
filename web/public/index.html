@@ -16,6 +16,9 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
+  <!-- Chart.js for Intrusion Frequency Analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
   <style>
     /* =====================================================================
        MATERIAL DESIGN 3 (M3) COLOR SYSTEM & DESIGN TOKENS (LIGHT THEME)
@@ -373,7 +376,7 @@
 
     /* Map Styling */
     #map {
-      height: 520px;
+      height: clamp(340px, 42vh, 520px);
       width: 100%;
       border-radius: 0 0 var(--md-shape-corner-l) var(--md-shape-corner-l);
     }
@@ -511,7 +514,7 @@
 
     .table-wrapper {
       overflow-y: auto;
-      max-height: 460px;
+      max-height: clamp(280px, 36vh, 460px);
       border-radius: 0 0 var(--md-shape-corner-l) var(--md-shape-corner-l);
     }
 
@@ -748,6 +751,188 @@
       background: #7f1d1d;
       color: #fee2e2;
     }
+
+    /* =====================================================================
+       ANALYTICS & INTRUSION FREQUENCY SECTION
+       ===================================================================== */
+    .analytics-section {
+      background: var(--md-sys-color-surface);
+      border: 1px solid var(--md-sys-color-outline-variant);
+      border-radius: var(--md-shape-corner-l);
+      box-shadow: var(--md-elevation-1);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .analytics-grid {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr 1fr;
+      gap: 16px;
+      padding: 16px;
+      background: var(--md-sys-color-background);
+    }
+
+    @media (max-width: 1100px) {
+      .analytics-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .chart-card {
+      background: var(--md-sys-color-surface);
+      border: 1px solid var(--md-sys-color-outline-variant);
+      border-radius: var(--md-shape-corner-m);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: var(--md-elevation-1);
+      min-width: 0;
+    }
+
+    .chart-header {
+      margin-bottom: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .chart-header h3 {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--md-sys-color-primary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .chart-header small {
+      font-size: 0.75rem;
+      color: var(--md-sys-color-on-surface-variant);
+    }
+
+    .chart-canvas-wrapper {
+      position: relative;
+      height: 220px;
+      width: 100%;
+    }
+
+    .nav-jump-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nav-jump-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: var(--md-sys-color-surface-container-low);
+      border: 1px solid var(--md-sys-color-outline-variant);
+      border-radius: var(--md-shape-corner-full);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--md-sys-color-on-surface-variant);
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .nav-jump-btn:hover {
+      background: var(--md-sys-color-surface-container);
+      color: var(--md-sys-color-primary);
+    }
+
+    /* =====================================================================
+       1366x768 & COMPACT LAPTOP VIEWPORT OPTIMIZATIONS
+       ===================================================================== */
+    @media (max-width: 1400px), (max-height: 850px) {
+      body {
+        padding: 12px 18px;
+      }
+      .container {
+        gap: 12px;
+        max-width: 100%;
+      }
+      .app-bar {
+        padding: 10px 18px;
+      }
+      .brand-logo-badge {
+        width: 38px;
+        height: 38px;
+        font-size: 20px;
+      }
+      .brand-titles h1 {
+        font-size: 1.1rem;
+      }
+      .brand-titles p {
+        font-size: 0.75rem;
+      }
+      .status-hero {
+        padding: 10px 18px;
+      }
+      .hero-icon {
+        font-size: 28px;
+      }
+      .hero-text h2 {
+        font-size: 1.1rem;
+      }
+      .hero-text p {
+        font-size: 0.8rem;
+      }
+      .kpi-grid {
+        gap: 10px;
+      }
+      .kpi-card {
+        padding: 10px 12px;
+        gap: 10px;
+      }
+      .kpi-icon-box {
+        width: 34px;
+        height: 34px;
+        font-size: 20px;
+      }
+      .kpi-label {
+        font-size: 0.68rem;
+      }
+      .kpi-value {
+        font-size: 1.05rem;
+      }
+      .kpi-sub {
+        font-size: 0.68rem;
+      }
+      .dashboard-grid {
+        gap: 12px;
+        grid-template-columns: 1.15fr 1fr;
+      }
+      #map {
+        height: clamp(300px, 38vh, 460px);
+      }
+      .table-wrapper {
+        max-height: clamp(250px, 32vh, 400px);
+      }
+      .panel-header {
+        padding: 10px 16px;
+      }
+      .table-toolbar {
+        padding: 8px 14px;
+      }
+      tbody td, thead th {
+        padding: 8px 12px;
+        font-size: 0.8rem;
+      }
+      .analytics-grid {
+        gap: 10px;
+        padding: 12px;
+      }
+      .chart-card {
+        padding: 12px;
+      }
+      .chart-canvas-wrapper {
+        height: 180px;
+      }
+    }
   </style>
 </head>
 
@@ -771,9 +956,22 @@
         </div>
       </div>
 
-      <div class="live-status-pill">
-        <span class="pulse-dot"></span>
-        <span>LIVE TELEMETRY</span>
+      <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+        <nav class="nav-jump-group">
+          <a href="#liveOperations" class="nav-jump-btn">
+            <span class="material-symbols-outlined" style="font-size: 16px;">map</span>
+            <span>Live Sector & Logs</span>
+          </a>
+          <a href="#analyticsSection" class="nav-jump-btn">
+            <span class="material-symbols-outlined" style="font-size: 16px;">insights</span>
+            <span>Frequency Analytics</span>
+          </a>
+        </nav>
+
+        <div class="live-status-pill">
+          <span class="pulse-dot"></span>
+          <span>LIVE TELEMETRY</span>
+        </div>
       </div>
     </header>
 
@@ -840,7 +1038,7 @@
     </div>
 
     <!-- 4. MAIN DASHBOARD: MAP & INCIDENT DATA TABLE -->
-    <div class="dashboard-grid">
+    <div id="liveOperations" class="dashboard-grid">
 
       <!-- Left Column: Live Sector Map -->
       <div class="panel-card">
@@ -909,6 +1107,64 @@
       </div>
 
     </div>
+
+    <!-- 5. ELEPHANT INTRUSION FREQUENCY & ANALYTICS SECTION -->
+    <section id="analyticsSection" class="analytics-section">
+      <div class="panel-header">
+        <h2 class="panel-title">
+          <span class="material-symbols-outlined">insights</span>
+          Elephant Intrusion Frequency & Incident Analytics
+        </h2>
+        <span class="chip chip-night" id="analyticsSummaryBadge">
+          <span class="material-symbols-outlined" style="font-size: 13px;">analytics</span>
+          Historical Frequency Insights
+        </span>
+      </div>
+
+      <div class="analytics-grid">
+        <!-- Chart 1: Daily Intrusion Frequency Timeline -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>
+              <span class="material-symbols-outlined" style="font-size: 16px; color: var(--md-sys-color-primary);">trending_up</span>
+              Daily Breach Frequency (Timeline)
+            </h3>
+            <small>Chronological frequency of breaches recorded across all dates</small>
+          </div>
+          <div class="chart-canvas-wrapper">
+            <canvas id="timelineChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Chart 2: Sector Risk Hotspots -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>
+              <span class="material-symbols-outlined" style="font-size: 16px; color: var(--md-sys-color-alert);">fmd_bad</span>
+              Corridor Hotspot Distribution
+            </h3>
+            <small>Zone 1 (North) vs Zone 2 (East) vs Dual breaches</small>
+          </div>
+          <div class="chart-canvas-wrapper">
+            <canvas id="sectorChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Chart 3: Temporal Risk (Night vs Day) -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>
+              <span class="material-symbols-outlined" style="font-size: 16px; color: #5b21b6;">bedtime</span>
+              Time-of-Day Risk Pattern
+            </h3>
+            <small>Night (Floodlight Armed) vs Daylight breaches</small>
+          </div>
+          <div class="chart-canvas-wrapper">
+            <canvas id="diurnalChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
 
   </div>
 
@@ -1137,6 +1393,7 @@
       renderAlertsTable();
       renderMapMarkers();
       updateKpiCounts();
+      renderOrUpdateCharts();
     } );
 
     // Robust HTML Escaping Utility for Telemetry Rendering
@@ -1339,6 +1596,208 @@
         showSnackbar( 'Failed to clear logs: ' + err.message, true );
       }
     } );
+
+    // =====================================================================
+    // 9. INTRUSION FREQUENCY & INCIDENT ANALYTICS (CHART.JS)
+    // =====================================================================
+    let timelineChartInstance = null;
+    let sectorChartInstance = null;
+    let diurnalChartInstance = null;
+
+    function aggregateFrequencyByDate( alerts ) {
+      const counts = {};
+      alerts.forEach( item => {
+        const raw = item.timestamp || '';
+        const match = raw.match( /\d{4}-\d{2}-\d{2}/ );
+        const key = match ? match[ 0 ] : 'Recent';
+        counts[ key ] = ( counts[ key ] || 0 ) + 1;
+      } );
+
+      const sortedDates = Object.keys( counts ).sort();
+      return {
+        labels: sortedDates.length ? sortedDates : [ 'No Records' ],
+        data: sortedDates.length ? sortedDates.map( k => counts[ k ] ) : [ 0 ]
+      };
+    }
+
+    function aggregateBySector( alerts ) {
+      const counts = {
+        'Zone 1 (North)': 0,
+        'Zone 2 (East)': 0,
+        'Dual Breach (A & B)': 0
+      };
+
+      alerts.forEach( item => {
+        const z = ( item.zone || '' ).toUpperCase();
+        if ( z.includes( 'SECTOR A & B' ) || z.includes( 'DUAL' ) ) {
+          counts[ 'Dual Breach (A & B)' ]++;
+        } else if ( z.includes( 'SECTOR A' ) || z.includes( 'ZONE 1' ) ) {
+          counts[ 'Zone 1 (North)' ]++;
+        } else if ( z.includes( 'SECTOR B' ) || z.includes( 'ZONE 2' ) ) {
+          counts[ 'Zone 2 (East)' ]++;
+        } else {
+          counts[ 'Zone 1 (North)' ]++;
+        }
+      } );
+
+      return counts;
+    }
+
+    function aggregateByLighting( alerts ) {
+      let night = 0;
+      let day = 0;
+      alerts.forEach( item => {
+        const l = ( item.lighting || '' ).toUpperCase();
+        if ( l.includes( 'NIGHT' ) ) night++;
+        else day++;
+      } );
+      if ( alerts.length === 0 ) {
+        return { night: 0, day: 0 };
+      }
+      return { night, day };
+    }
+
+    function renderOrUpdateCharts() {
+      if ( typeof Chart === 'undefined' ) return;
+
+      const dateAgg = aggregateFrequencyByDate( cachedAlerts );
+      const sectorAgg = aggregateBySector( cachedAlerts );
+      const lightingAgg = aggregateByLighting( cachedAlerts );
+
+      // Update badge summary
+      const analyticsSummaryBadge = document.getElementById( 'analyticsSummaryBadge' );
+      if ( analyticsSummaryBadge ) {
+        analyticsSummaryBadge.innerHTML = `
+          <span class="material-symbols-outlined" style="font-size: 13px;">analytics</span>
+          Total Logged: ${ cachedAlerts.length } Events
+        `;
+      }
+
+      // 1. Timeline Chart (Daily Frequency)
+      const timelineCanvas = document.getElementById( 'timelineChart' );
+      if ( timelineCanvas ) {
+        if ( !timelineChartInstance ) {
+          timelineChartInstance = new Chart( timelineCanvas, {
+            type: 'bar',
+            data: {
+              labels: dateAgg.labels,
+              datasets: [ {
+                label: 'Breach Events',
+                data: dateAgg.data,
+                backgroundColor: 'rgba(15, 41, 66, 0.85)',
+                borderColor: '#0f2942',
+                borderWidth: 1.5,
+                borderRadius: 6,
+                maxBarThickness: 36
+              } ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  callbacks: {
+                    label: ( ctx ) => ` ${ ctx.parsed.y } Intrusion(s)`
+                  }
+                }
+              },
+              scales: {
+                x: {
+                  grid: { display: false },
+                  ticks: { font: { size: 11, family: 'Roboto' } }
+                },
+                y: {
+                  beginAtZero: true,
+                  ticks: { precision: 0, font: { size: 11, family: 'Roboto' } },
+                  grid: { color: '#e2e8f0' }
+                }
+              }
+            }
+          } );
+        } else {
+          timelineChartInstance.data.labels = dateAgg.labels;
+          timelineChartInstance.data.datasets[ 0 ].data = dateAgg.data;
+          timelineChartInstance.update();
+        }
+      }
+
+      // 2. Sector Risk Hotspots (Doughnut)
+      const sectorCanvas = document.getElementById( 'sectorChart' );
+      if ( sectorCanvas ) {
+        const sectorLabels = Object.keys( sectorAgg );
+        const sectorData = Object.values( sectorAgg );
+        const hasData = sectorData.some( v => v > 0 );
+
+        if ( !sectorChartInstance ) {
+          sectorChartInstance = new Chart( sectorCanvas, {
+            type: 'doughnut',
+            data: {
+              labels: sectorLabels,
+              datasets: [ {
+                data: hasData ? sectorData : [ 1, 0, 0 ],
+                backgroundColor: hasData ? [ '#0284c7', '#d97706', '#dc2626' ] : [ '#cbd5e1', '#e2e8f0', '#f1f5f9' ],
+                borderWidth: 2,
+                borderColor: '#ffffff'
+              } ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  position: 'bottom',
+                  labels: { boxWidth: 12, font: { size: 10.5, family: 'Roboto' } }
+                }
+              },
+              cutout: '62%'
+            }
+          } );
+        } else {
+          sectorChartInstance.data.labels = sectorLabels;
+          sectorChartInstance.data.datasets[ 0 ].data = hasData ? sectorData : [ 1, 0, 0 ];
+          sectorChartInstance.data.datasets[ 0 ].backgroundColor = hasData ? [ '#0284c7', '#d97706', '#dc2626' ] : [ '#cbd5e1', '#e2e8f0', '#f1f5f9' ];
+          sectorChartInstance.update();
+        }
+      }
+
+      // 3. Diurnal (Night vs Day) Temporal Distribution
+      const diurnalCanvas = document.getElementById( 'diurnalChart' );
+      if ( diurnalCanvas ) {
+        const diurnalData = [ lightingAgg.night, lightingAgg.day ];
+        const hasDiurnalData = ( lightingAgg.night > 0 || lightingAgg.day > 0 );
+
+        if ( !diurnalChartInstance ) {
+          diurnalChartInstance = new Chart( diurnalCanvas, {
+            type: 'doughnut',
+            data: {
+              labels: [ 'Night Breaches', 'Day Breaches' ],
+              datasets: [ {
+                data: hasDiurnalData ? diurnalData : [ 1, 0 ],
+                backgroundColor: hasDiurnalData ? [ '#5b21b6', '#38bdf8' ] : [ '#cbd5e1', '#e2e8f0' ],
+                borderWidth: 2,
+                borderColor: '#ffffff'
+              } ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  position: 'bottom',
+                  labels: { boxWidth: 12, font: { size: 10.5, family: 'Roboto' } }
+                }
+              },
+              cutout: '62%'
+            }
+          } );
+        } else {
+          diurnalChartInstance.data.datasets[ 0 ].data = hasDiurnalData ? diurnalData : [ 1, 0 ];
+          diurnalChartInstance.data.datasets[ 0 ].backgroundColor = hasDiurnalData ? [ '#5b21b6', '#38bdf8' ] : [ '#cbd5e1', '#e2e8f0' ];
+          diurnalChartInstance.update();
+        }
+      }
+    }
   </script>
 </body>
 
